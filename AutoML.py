@@ -1,14 +1,8 @@
-import numpy as np
-import pandas as pd
-import numpy as np
-import pandas as pd
 import tensorflow as tf # ==2.10
-from sklearn.utils import shuffle
 from tensorflow import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, Normalization
 from tensorflow.keras.optimizers import Adam
-import matplotlib.pyplot as plt
 import optuna
 from optuna.samplers import TPESampler
 from IPython.display import clear_output
