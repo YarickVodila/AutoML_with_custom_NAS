@@ -19,26 +19,53 @@ class TabularDataClassifier:
     history = None
     model = None
 
-    def __init__(self, n_trails):
-        self.n_trails = n_trails
+    def __init__(self, n_trails, n_class = 2):
+        '''
+        Метод инициализации модели
+
+        :param n_trails: количество итераций подбора архитектуры (int);
+        :param n_class: Если задача бинарной классификации, то параметру следует назначить значение 2,
+         иначе значение равное количеству классов (int);
         
+        '''
+         
+        self.n_trails = n_trails
+        self.n_class = n_class
+
     def __create_model(self, input_shape, layers, units, dropouts):
+        '''
+        Закрытый метод, который создаёт модель по параметрам.
+
+        :param input_shape: размер входных данных;
+        :param layers: количество скрытых слоёв;
+        :param units: количество нейронов;
+        :param dropouts: параметр rate у слоя Dropout;
+        
+        :return: Возвращаем архитектуру модели
+        '''
+    
         model = Sequential()
         for i in range(layers):
             if i==0:
                 model.add(Dense(units, input_shape = (input_shape,), activation = 'relu'))
                 model.add(Dropout(dropouts))
-                model.add(Normalization())
+                model.add(Normalization()) # выполняет пофункциональную нормализацию входных функций.
             else:
                 model.add(Dense(units//(i*2), activation = 'relu'))
                 model.add(Dropout(dropouts))
                 model.add(Normalization())
         
 
-        model.add(Dense(1, activation = 'sigmoid'))
-        optimizer = Adam(learning_rate = 0.001)
+        if self.n_class == 2:
+            model.add(Dense(1, activation = 'sigmoid'))
+            optimizer = Adam(learning_rate = 0.001)
+            model.compile(loss ='binary_crossentropy', optimizer = optimizer, metrics = ['BinaryAccuracy', 'AUC'])
+        else:
 
-        model.compile(loss ='binary_crossentropy', optimizer = optimizer, metrics = ['BinaryAccuracy', 'AUC'])
+            model.add(Dense(self.n_class, activation = 'softmax'))
+            optimizer = Adam(learning_rate = 0.001)
+            model.compile(loss ='sparse_categorical_accuracy', optimizer = optimizer, metrics = ['accuracy'])
+
         model.summary()
 
         return model
@@ -80,9 +107,6 @@ class TabularDataClassifier:
         clear_output(wait=True)
         trial = study.best_trial
         
-        print('-' * 10, 'END', '-' * 10)
-        print(f"Best metrics: {trial.value}")
-        print('-' * 7, 'Train best model', '-' * 7)
 
         model = self.__create_model(self.features_train.shape[1], trial.params.get('count_layers'), trial.params.get('units'),
                                    trial.params.get('dropout'))
@@ -91,7 +115,11 @@ class TabularDataClassifier:
                                                      min_delta=0.0001, restore_best_weights = True)
         
         history = model.fit(self.features_train, self.target_train, verbose = self.verbose, batch_size = self.batch_size,
-                             epochs = self.epochs, validation_data=(self.features_val, self.target_val), callbacks=[callback])
+                             epochs = self.epochs, validation_data = (self.features_val, self.target_val), callbacks = [callback])
+        
+        print('\n','#' * 40, 'END', '#' * 41, end='\n\n')
+        print(f"Best metrics: {trial.value}", end='\n\n')
+        print('#' * 34, 'Best model was training', '#' * 34, end='\n\n')
         
         self.model = model
         self.history = history
